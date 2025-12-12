@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="TimeSeries_f_44760" GridType="Collection" CollectionType="Temporal">
+      <Grid Name="mesh" GridType="Uniform">
+        <Topology NumberOfElements="3456" TopologyType="Triangle" NodesPerElement="3">
+          <DataItem Dimensions="3456 3" NumberType="UInt" Format="HDF">65e2dc1a55f1cb76be1b713d9669b618318f399a.h5:/Mesh/0/mesh/topology</DataItem>
+        </Topology>
+        <Geometry GeometryType="XY">
+          <DataItem Dimensions="1853 2" Format="HDF">65e2dc1a55f1cb76be1b713d9669b618318f399a.h5:/Mesh/0/mesh/geometry</DataItem>
+        </Geometry>
+        <Time Value="0.000000000000000e+00" />
+        <Attribute Name="f_44760" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="1853 1" Format="HDF">65e2dc1a55f1cb76be1b713d9669b618318f399a.h5:/VisualisationVector/0</DataItem>
+        </Attribute>
+      </Grid>
+    </Grid>
+  </Domain>
+</Xdmf>
