@@ -1,5 +1,5 @@
 # Error-aware digital twin of a thermal fin in heat sink systems
-
+ 
 This project constructs an error-aware digital twin of a heat sink system benchmarked using a thermal fin. It requires **Docker** to install **FEniCS** and **RBniCS** (tested on macOS) and Dockerfile is provided to set up docker environment. RBniCS is included as a Git submodule.
 
 
