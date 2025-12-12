@@ -60,4 +60,8 @@ Temporary Items
 # iCloud generated files
 *.icloud
 
+# rbnics-generated output
+1StageSubfinPOD/
+Subfin_NO_GEOMETRY_PARAM/
+
 # End of https://www.toptal.com/developers/gitignore/api/macosMiniconda3-latest-MacOSX-x86_64.sh
