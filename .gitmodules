@@ -1,0 +1,3 @@
+[submodule "RBniCS"]
+	path = RBniCS
+	url = https://github.com/RBniCS/RBniCS.git
