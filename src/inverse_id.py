@@ -28,6 +28,7 @@ def plot_field(u, ax=None, vmin=0.0, vmax=1.9):
 
     levels = np.linspace(vmin, vmax, 100)
     norm = plt.Normalize(vmin, vmax)
+
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 3))
     else:
@@ -128,10 +129,10 @@ def cost_fun_with_error(problem, sensor_loc, observation, mu0,
 
 
 def identify(problem, sensor_loc, y_true, online_mu,
-               initial_guess=1.0, rb=False):
+               initial_guess=1.0, rb=False, return_time=False):
 
     '''
-    Inverse identification of parameter q based on sensor measurements 
+    Inverse identification of parameter q based on sensor measurements
     using RB (or FE) model
 
     Inputs:
@@ -141,9 +142,11 @@ def identify(problem, sensor_loc, y_true, online_mu,
         online_mu: known parameters and initial guess of q
         initial_guess: initial guess of q
         rb: True if simulating with RB model
+        return_time: if True, also return identification time
 
-    Outputs:
-        q_opt: estimated parameter q
+    Returns:
+        new_mu: identified parameters
+        id_time: (optional) identification time in seconds
     '''
 
     # set mu
@@ -162,22 +165,27 @@ def identify(problem, sensor_loc, y_true, online_mu,
         options={'disp': False, 'eps': 1e-8}
     )
     end_time = time.time()
-    print("Identification time:", end_time - start_time)
+    id_time = end_time - start_time
+    print("Identification time:", id_time)
     q_opt = float(res.x)
 
     new_mu = mu0.copy()
     new_mu[2] = q_opt
 
+    if return_time:
+        return new_mu, id_time
+    
     return new_mu
 
 
 def identify_with_error(
     problem, sensor_loc, y_true, online_mu,
     kriging,
-    initial_guess=1.0):
+    initial_guess=1.0,
+    return_time=False):
 
     '''
-    Inverse identification of parameter q based on sensor measurements 
+    Inverse identification of parameter q based on sensor measurements
     using RB model. The identification takes into account RB model error.
 
     Inputs:
@@ -187,6 +195,11 @@ def identify_with_error(
         online_mu: known parameters and initial guess of q
         kriging: trained Kriging model to predict RB error
         initial_guess: initial guess of q
+        return_time: if True, also return identification time
+
+    Returns:
+        new_mu: identified parameters
+        id_time: (optional) identification time in seconds
     '''
 
     # set mu
@@ -205,13 +218,16 @@ def identify_with_error(
         options={'disp': False, 'eps': 1e-8}
     )
     end_time = time.time()
-    print("Identification time using error corrected RB model:", end_time - start_time)
+    id_time = end_time - start_time
+    print("Identification time using error corrected RB model:", id_time)
 
     q_opt = float(res.x)
 
     new_mu = mu0.copy()
     new_mu[2] = q_opt
 
+    if return_time:
+        return new_mu, id_time
     return new_mu
 
 
@@ -244,39 +260,46 @@ def read_sensor(truth_problem, mu, q_value, sensor_loc):
     return y_true, truth_solution
 
 
-def monitor(truth_problem, mu):
+def monitor(truth_problem, mu, plot=True):
 
     vmin, vmax = 0.0, 1.9
-    cmap='inferno' # set colorbar
 
     # update mu
     est_mu = list(mu)
-    print('system parameters for monitoring:', est_mu)
-
-    # run FE simulation
+    reset_cache(truth_problem)
     truth_problem.set_mu(tuple(est_mu))
-    start_time = time.time()
     truth_solution = truth_problem.solve()
-    end_time = time.time()
 
     # plot
-    fig, ax, tcf = plot_field(truth_solution, vmin=0.0, vmax=1.9)
-    cbar = fig.colorbar(tcf, ax=ax, shrink=0.8, pad=0.02)
-    cbar.set_label("Temperature")
-    cbar.ax.tick_params(labelsize=8)
-    plt.show()
+    if plot:
+        print('system parameters for monitoring:', est_mu)
+        fig, ax, tcf = plot_field(truth_solution, vmin=0.0, vmax=1.9)
+        cbar = fig.colorbar(tcf, ax=ax, shrink=0.8, pad=0.02)
+        cbar.set_label("Temperature (dimensionless)")
+        cbar.ax.tick_params(labelsize=8)
+        plt.show()
 
     # print maximum temperature
     max_temp = truth_solution.vector().max()
-    print("current maximum temperature:", max_temp)
+    if plot:
+        print("current maximum temperature:", max_temp)
 
     return truth_solution, max_temp
 
 def control_cooling(truth_problem, current_mu, max_temp,
-                    low_threshold=0.7, high_threshold=1.5):
+                    low_threshold=0.5, high_threshold=1.5, plot=True):
+    '''
+    Apply cooling control based on temperature thresholds.
+
+    Returns:
+        new_mu: updated parameters
+        truth_solution: FE solution after control
+        new_max_temp: max temperature after control
+        action: control action taken ("Cooling increased", "Cooling reduced", "No cooling adjustment")
+    '''
 
     vmin, vmax = 0.0, 1.9
-    cmap='inferno'
+    action = "No cooling adjustment"
 
     # --------------------------
     # Scenario 1: When temperature is already low -> stop cooling
@@ -286,26 +309,32 @@ def control_cooling(truth_problem, current_mu, max_temp,
         new_mu = list(current_mu)
         new_mu[0] = 2   # your chosen control action
         new_mu[1] = 1
+        action = "Cooling reduced"
         print("system parameters after control:", new_mu)
 
         # run FE simulation
+        reset_cache(truth_problem)
         truth_problem.set_mu(tuple(new_mu))
-        start_time = time.time()
         truth_solution = truth_problem.solve()
-        end_time = time.time()
 
-        # plot field
-        fig, ax, tcf = plot_field(truth_solution, vmin=0.0, vmax=1.9)
-        cbar = fig.colorbar(tcf, ax=ax, shrink=0.8, pad=0.02)
-        cbar.set_label("Temperature")
-        cbar.ax.tick_params(labelsize=8)
-        plt.show()
+        if plot:
+            fig, ax, tcf = plot_field(truth_solution, vmin=0.0, vmax=1.9)
+            cbar = fig.colorbar(tcf, ax=ax, shrink=0.8, pad=0.02)
+            cbar.set_label("Temperature")
+            cbar.ax.tick_params(labelsize=8)
+            plt.show()
 
-        # print maximum temperature
         new_max_temp = truth_solution.vector().max()
         print("current maximum temperature:", new_max_temp)
 
-        return new_mu, truth_solution, new_max_temp
+        if new_mu[0] == 5 and new_mu[1] == 3:
+            action_state = "Cooling increased"
+        elif new_mu[0] == 2 and new_mu[1] == 1:
+            action_state = "Cooling reduced"
+        else:
+            action_state = "No cooling adjustment"
+
+        return new_mu, truth_solution, new_max_temp, action, action_state
 
     # --------------------------
     # Scenario 2: When tempearture is too high -> increase cooling
@@ -315,29 +344,45 @@ def control_cooling(truth_problem, current_mu, max_temp,
         new_mu = list(current_mu)
         new_mu[0] = 5
         new_mu[1] = 3
+        action = "Cooling increased"
         print("system parameters after control:", new_mu)
 
+        reset_cache(truth_problem)
         truth_problem.set_mu(tuple(new_mu))
-        start_time = time.time()
         truth_solution = truth_problem.solve()
-        end_time = time.time()
-        
-        fig, ax, tcf = plot_field(truth_solution, vmin=0.0, vmax=1.9)
-        cbar = fig.colorbar(tcf, ax=ax, shrink=0.8, pad=0.02)
-        cbar.set_label("Temperature")
-        cbar.ax.tick_params(labelsize=8)
-        plt.show()
+
+        if plot:
+            fig, ax, tcf = plot_field(truth_solution, vmin=0.0, vmax=1.9)
+            cbar = fig.colorbar(tcf, ax=ax, shrink=0.8, pad=0.02)
+            cbar.set_label("Temperature")
+            cbar.ax.tick_params(labelsize=8)
+            plt.show()
 
         new_max_temp = truth_solution.vector().max()
         print("current maximum temperature:", new_max_temp)
 
-        return new_mu, truth_solution, new_max_temp
+        if new_mu[0] == 5 and new_mu[1] == 3:
+            action_state = "Cooling increased"
+        elif new_mu[0] == 2 and new_mu[1] == 1:
+            action_state = "Cooling reduced"
+        else:
+            action_state = "No cooling adjustment"
+
+        return new_mu, truth_solution, new_max_temp, action, action_state
 
     # --------------------------
-    # If temperature is in the safe range -> do nothing
+    # If temperature is in normal range -> do nothing
     # --------------------------
     print("Temperature is in normal range. No cooling adjustment.")
+    reset_cache(truth_problem)
     truth_solution = truth_problem.solve()
     new_max_temp = truth_solution.vector().max()
 
-    return current_mu, truth_solution, new_max_temp
+    if current_mu[0] == 5 and current_mu[1] == 3:
+        action_state = "Cooling increased"
+    elif current_mu[0] == 2 and current_mu[1] == 1:
+        action_state = "Cooling reduced"
+    else:
+        action_state = "No cooling adjustment"
+
+    return current_mu, truth_solution, new_max_temp, action, action_state
