@@ -1,6 +1,19 @@
 # Error-aware digital twin of a thermal fin in heat sink systems
  
-This project constructs an error-aware digital twin of a heat sink system benchmarked using a thermal fin. It requires **Docker** to install **FEniCS** and **RBniCS** (tested on macOS) and Dockerfile is provided to set up docker environment. RBniCS is included as a Git submodule.
+This project constructs an error-aware digital twin of a heat sink system benchmarked using a thermal fin. To try demo, run `scripts/dtwin_simulator.ipynb`. This notebook demonstrates a digital twin under time-varying heat fluxes. The simulation steps are:
+1. True heat flux of physical thermal fin changes over time
+    * Since we do not have an actual physical system, the physical model is simulated using finite element(FE) model
+2. Get sensor measurement from physical model
+2. Error-aware Reduced Basis (RB)-based digital twin model inversely identifies the heat flux from sensor data
+3. We monitor the temperature field based on identified heat flux using FE model
+4. Control actions are applied when temperature thresholds are exceeded and the corresponding temperature field is visualized using FE model
+
+The output is an animated GIF:
+
+![simulation](https://github.com/user-attachments/assets/c9ff25f9-f44b-418a-ae49-ce092be9d90c)
+
+
+It requires **Docker** to install **FEniCS** and **RBniCS** (tested on macOS) and Dockerfile is provided to set up docker environment. RBniCS is included as a Git submodule.
 
 
 ## 1. Clone repository (with RBniCS Submodule)
